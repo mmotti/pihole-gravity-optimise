@@ -32,7 +32,7 @@ ads.timesunion.com
 #### Installation
 ```
 sudo bash
-wget –qO /usr/local/bin/gravityOptimise.sh https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.sh
+wget -qO /usr/local/bin/gravityOptimise.sh https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.sh
 chmod +x /usr/local/bin/gravityOptimise.sh
 exit
 ```
