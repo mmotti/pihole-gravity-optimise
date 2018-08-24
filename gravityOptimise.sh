@@ -89,17 +89,17 @@ process_wildcards () {
 
         echo "--> $(wc -l <<< "$domains") wildcards in $file_wildcards"
 
-	# Read the pihole gravity list
-        echo "--> Reading gravity.list"
-	gravity=$(cat $file_gravity)
+	# Add ^ prefix and $ suffix to gravity (for comparison)
+	echo "--> Processing $file_gravity"
+	gravity_ps=$(sed 's/^/\^/g;s/$/\$/g' $file_gravity)
 
 	# Conditional exit
-	if [ -z "$gravity.list" ]; then
+	if [ -z "$gravity_ps" ]; then
 		echo "--> There is an issue with gravity.list"
 		return 1
 	fi
 
-	echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
+	echo "--> $(wc -l <<< "$gravity_ps") domains in gravity.list"
 
 	# Convert something.com to something.com$
 	# Convert something.com to ^something.com$
@@ -108,17 +108,14 @@ process_wildcards () {
 	w_domain=$(sed 's/$/\$/g' <<< "$domains")
 	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
 
-	# Add ^ prefix and $ suffix to gravity (for comparison)
-	gravity_ps=$(sed 's/^/\^/g;s/$/\$/g' $file_gravity)
-
 	# Perform fixed string match for subdomains
 	echo "--> Identifying subdomains to remove from gravity.list"
 
 	# Find inverted matches for ^something.com$
 	# Find inverted matches for something.com$
 	# Remove prefix and suffix
-	new_gravity=$(grep -vFf <(echo "$e_domain") <<< "$gravity_ps" |
-	grep -vFf <(echo "$w_domain") |
+	new_gravity=$(grep -vFf <(echo "$w_domain") <<< "$gravity_ps" |
+	grep -vFf <(echo "$e_domain") |
 	sed 's/^\^//g;s/\$$//g' |
 	sort)
 
