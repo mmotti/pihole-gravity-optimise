@@ -89,9 +89,9 @@ process_wildcards () {
 		echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
 	fi
 
-	# Grab base domains from dnsmasq conf file
+	# Grab unique base domains from dnsmasq conf file
 	echo "--> Fetching domains from $file_wildcards"
-	domains=$(awk -F '/' '{print $2}' $file_wildcards | sort)
+	domains=$(awk -F '/' '{print $2}' $file_wildcards | sort -u)
 
 	# Conditional exit
 	if [ -z "$domains" ]; then
