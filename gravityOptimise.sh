@@ -77,64 +77,67 @@ process_wildcards () {
 
 	echo "#### Wildcard Removals ####"
 
+	# Grab unique base domains from dnsmasq conf file
+        echo "--> Fetching domains from $file_wildcards"
+        domains=$(awk -F '/' '{print $2}' $file_wildcards)
+
+        # Conditional exit
+        if [ -z "$domains" ]; then
+                echo "--> No wildcards were captured from $file_wildcards"
+                return 1
+        fi
+
+        echo "--> $(wc -l <<< "$domains") wildcards in $file_wildcards"
+
 	# Read the pihole gravity list
         echo "--> Reading gravity.list"
-	gravity=$(sort $file_gravity)
+	gravity=$(cat $file_gravity)
 
 	# Conditional exit
 	if [ -z "$gravity.list" ]; then
 		echo "--> There is an issue with gravity.list"
 		return 1
-	else
-		echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
 	fi
 
-	# Grab unique base domains from dnsmasq conf file
-	echo "--> Fetching domains from $file_wildcards"
-	domains=$(awk -F '/' '{print $2}' $file_wildcards | sort -u)
-
-	# Conditional exit
-	if [ -z "$domains" ]; then
-		echo "--> No wildcards were captured from $file_wildcards"
-		return 1
-	else
-		echo "--> $(wc -l <<< "$domains") wildcards in $file_wildcards"
-	fi
-
-	# Convert something.com to .something.com
-	# Convert something.com to something.com.
-	# for grep fixed-strings match
-	echo "--> Fetching subdomains from $file_wildcards"
-	dot_prefix=$(sed 's/^/\./g' <<< "$domains")
-	dot_suffix=$(sed 's/$/\./g' <<< "$domains")
-	# Perform fixed string match for subdomains
-	echo "--> Identifying subdomains to remove from gravity.list"
-	# Find all matches for .something.com
-	sd_removal=$(grep -Ff <(echo "$dot_prefix") $file_gravity | sort)
-	# Exclude matches for something.com.
-	sd_removal=$(grep -vFf <(echo "$dot_suffix") <<< "$sd_removal" | sort)
-
-	# If there are no subdomains to remove
-	if [ -z "$sd_removal" ]; then
-		echo "--> 0 subdomains detected"
-	else
-		# Status update
-		echo "--> $(wc -l <<< "$sd_removal") subdomains to remove"
-
-		# Remove subdomains from gravity array
-		echo "--> Removing subdomains from gravity.list"
-		gravity=$(comm -23 <(echo "$gravity") <(echo "$sd_removal"))
-	fi
-
-	# Remove base domains from gravity
-	echo "--> Removing base domains from gravity.list"
-	gravity=$(comm -23 <(echo "$gravity") <(echo "$domains"))
-
-	# Status update
 	echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
 
+	# Convert something.com to something.com$
+	# Convert something.com to ^something.com$
+	# for grep fixed-strings match
+	echo "--> Fetching removal criteria from $file_wildcards"
+	w_domain=$(sed 's/$/\$/g' <<< "$domains")
+	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
+
+	# Add ^ prefix and $ suffix to gravity (for comparison)
+	gravity_ps=$(sed 's/^/\^/g;s/$/\$/g' $file_gravity)
+
+	# Perform fixed string match for subdomains
+	echo "--> Identifying subdomains to remove from gravity.list"
+
+	# Find inverted matches for ^something.com$
+	# Find inverted matches for something.com$
+	# Remove prefix and suffix
+	new_gravity=$(grep -vFf <(echo "$e_domain") <<< "$gravity_ps" |
+	grep -vFf <(echo "$w_domain") |
+	sed 's/^\^//g;s/\$$//g' |
+	sort)
+
+	# If there was an error populating new_gravity.list
+	if [ -z "$new_gravity" ]; then
+		echo "--> An issue occured when recreating gravity.list"
+		return 1
+	fi
+
+	# Status update
+	removal_count=$(($(wc -l <<< "$gravity_ps")-$(wc -l <<< "$new_gravity")))
+	echo "--> $removal_count unnecessary domains found"
+
+	# Status update
+	echo "--> $(wc -l <<< "$new_gravity") domains in gravity.list"
+
 	# Output gravity.list
-	echo "$gravity" | sudo tee $file_gravity > /dev/null
+	echo "--> Outputting $file_gravity"
+	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
 
 	return 0
 }
