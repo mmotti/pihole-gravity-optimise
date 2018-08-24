@@ -1,67 +1,155 @@
 #!/usr/bin/env bash
 
-# Set gravity.list location
-file_out="/etc/pihole/gravity.list"
-
-# Set regex.list location
+# Set file variables
+file_gravity="/etc/pihole/gravity.list"
+file_wildcards="/etc/dnsmasq.d/filter-lists.conf"
 file_regex="/etc/pihole/regex.list"
 
-# Read regex config
-echo "--> Reading regex criteria"
+pihole_update ()
+{
+	echo "#### Gravity List ####"
+	echo "--> Updating gravity.list"
+	pihole -g > /dev/null
+	echo "--> $(wc -l < $file_gravity) gravity list entries"
+}
 
-# Only read it if it exists and is not empty
-if [ -s $file_regex ]; then
-	regexList=$(cat $file_regex | sort -u)
-else
-	echo "--> Regex list is empty or does not exist."
-	exit
-fi
+process_regex ()
+{
+	echo "#### Regex Removals ####"
 
-# Status update
-echo "--> $(wc -l <<< "$regexList") regexps found"
+	# Only read it if it exists and is not empty
+	if [ -s $file_regex ]; then
+		regexList=$(sort -u $file_regex)
+	else
+		echo "--> Regex list is empty or does not exist."
+		return 1
+	fi
 
-# Read the pihole gravity list
-echo "--> Reading gravity.list"
+	# Status update
+	echo "--> $(wc -l <<< "$regexList") regexps found"
 
-# Only read it if it exists and is not empty
-if [ -s $file_out ]; then
-	gravityList=$(cat $file_out | sort -u)
-else
-	echo "--> gravity.list is empty or does not exist"
-	exit
-fi
+	# Read the pihole gravity list
+	echo "--> Reading gravity.list"
 
-# Status update
-echo "--> $(wc -l <<< "$gravityList") gravity.list entries"
+	# Only read it if it exists and is not empty
+	if [ -s $file_out ]; then
+		gravityList=$(sort -u $file_gravity)
+	else
+		echo "--> gravity.list is empty or does not exist"
+		return 1
+	fi
 
-# Create empty variable to store garbage
-garbage_hosts=
+	# Status update
+	echo "--> $(wc -l <<< "$gravityList") gravity.list entries"
 
-echo "--> Identifying unnecessary domains"
+	# Create empty variable to store garbage
+	garbage_hosts=
 
-# For each regex entry
-# Add any regex matches to an array
-while read -r regex; do
-	garbage_hosts+=$(grep -E $regex $file_out)
-done <<< "$regexList"
+	echo "--> Identifying unnecessary domains"
 
-# Remove any duplicates from unnecessary hosts
-garbage_hosts=$(sort -u <<< "$garbage_hosts")
+	# For each regex entry
+	# Add any regex matches to an array
+	while read -r regex; do
+		garbage_hosts+=$(grep -E $regex $file_gravity)
+	done <<< "$regexList"
 
-# Status update
-echo "--> $(wc -l <<< "$garbage_hosts") unnecessary hosts identified"
+	# Remove any duplicates from unnecessary hosts
+	garbage_hosts=$(sort -u <<< "$garbage_hosts")
 
-# Remove unnecessary entries
-echo "--> Removing unnecessary domains"
-cleaned_hosts=$(comm -23 <(echo "$gravityList") <(echo "$garbage_hosts"))
+	# Status update
+	echo "--> $(wc -l <<< "$garbage_hosts") unnecessary hosts identified"
 
-# Status update
-echo "--> gravity.list: $(wc -l <<< "$cleaned_hosts")"
+	# Remove unnecessary entries
+	echo "--> Removing unnecessary domains"
+	cleaned_hosts=$(comm -23 <(echo "$gravityList") <(echo "$garbage_hosts"))
 
-# Output file
-echo "--> Outputting $file_out"
-echo "$cleaned_hosts" | sudo tee $file_out > /dev/null
+	# Status update
+	echo "--> gravity.list: $(wc -l <<< "$cleaned_hosts")"
 
-# Refresh Pihole
-echo "--> Sending SIGHUP to Pihole"
-sudo killall -SIGHUP pihole-FTL
+	# Output file
+	echo "--> Outputting $file_gravity"
+	echo "$cleaned_hosts" | sudo tee $file_gravity > /dev/null
+
+	return 0
+}
+
+process_wildcards () {
+
+	echo "#### Wildcard Removals ####"
+
+	# Read the pihole gravity list
+        echo "--> Reading gravity.list"
+	gravity=$(sort $file_gravity)
+
+	# Conditional exit
+	if [ -z "$gravity.list" ]; then
+		echo "--> There is an issue with gravity.list"
+		return 1
+	else
+		echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
+	fi
+
+	# Grab base domains from dnsmasq conf file
+	echo "--> Fetching domains from $file_wildcards"
+	domains=$(awk -F '/' '{print $2}' $file_wildcards | sort)
+
+	# Conditional exit
+	if [ -z "$domains" ]; then
+		echo "--> No wildcards were captured from $file_wildcards"
+		return 1
+	else
+		echo "--> $(wc -l <<< "$domains") wildcards in $file_wildcards"
+	fi
+
+	# Convert something.com to .something.com
+	# for grep fixed-strings match
+	echo "--> Fetching subdomains from $file_wildcards"
+	subdomains=$(sed 's/^/\./g' <<< "$domains")
+
+	# Perform fixed string match for subdomains
+	echo "--> Identifying subdomains to remove from gravity.list"
+	sd_removal=$(grep -Ff <(echo "$subdomains") $file_gravity | sort)
+
+	# If there are no subdomains to remove
+	if [ -z "$sd_removal" ]; then
+		echo "--> 0 subdomains detected"
+	else
+		# Status update
+		echo "--> $(wc -l <<< "$sd_removal") subdomains to remove"
+
+		# Remove subdomains from gravity array
+		echo "--> Removing subdomains from gravity.list"
+		gravity=$(comm -23 <(echo "$gravity") <(echo "$sd_removal"))
+	fi
+
+	# Remove base domains from gravity
+	echo "--> Removing base domains from gravity.list"
+	gravity=$(comm -23 <(echo "$gravity") <(echo "$domains"))
+
+	# Status update
+	echo "--> $(wc -l <<< "$gravity") domains in gravity.list"
+
+	# Output gravity.list
+	echo "$gravity" | sudo tee $file_gravity > /dev/null
+
+	return 0
+}
+
+finalise () {
+
+	echo "#### Finalise changes ####"
+
+	# Refresh Pihole
+	echo "--> Sending SIGHUP to Pihole"
+	sudo killall -SIGHUP pihole-FTL
+
+}
+
+# Run gravity update
+pihole_update
+# Process regex removals
+process_regex
+# Process wildcard removals
+process_wildcards
+# Finish up
+finalise
