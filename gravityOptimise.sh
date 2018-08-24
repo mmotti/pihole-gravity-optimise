@@ -102,13 +102,17 @@ process_wildcards () {
 	fi
 
 	# Convert something.com to .something.com
+	# Convert something.com to something.com.
 	# for grep fixed-strings match
 	echo "--> Fetching subdomains from $file_wildcards"
-	subdomains=$(sed 's/^/\./g' <<< "$domains")
-
+	dot_prefix=$(sed 's/^/\./g' <<< "$domains")
+	dot_suffix=$(sed 's/$/\./g' <<< "$domains")
 	# Perform fixed string match for subdomains
 	echo "--> Identifying subdomains to remove from gravity.list"
-	sd_removal=$(grep -Ff <(echo "$subdomains") $file_gravity | sort)
+	# Find all matches for .something.com
+	sd_removal=$(grep -Ff <(echo "$dot_prefix") $file_gravity | sort)
+	# Exclude matches for something.com.
+	sd_removal=$(grep -vFf <(echo "$dot_suffix") <<< "$sd_removal" | sort)
 
 	# If there are no subdomains to remove
 	if [ -z "$sd_removal" ]; then
