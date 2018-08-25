@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-
+\
 # Set file variables
 file_gravity="/etc/pihole/gravity.list"
-file_wildcards="/etc/dnsmasq.d/filter-lists.conf"
+dir_wildcards="/etc/dnsmasq.d"
 file_regex="/etc/pihole/regex.list"
 
 pihole_update ()
 {
 	echo "#### Gravity List ####"
 	echo "--> Updating gravity.list"
-	pihole -g > /dev/null
+	pihole updateGravity > /dev/null
 	echo "--> $(wc -l < $file_gravity) gravity list entries"
 }
 
@@ -77,11 +77,14 @@ process_wildcards () {
 
 	echo "#### Wildcard Removals ####"
 
-	# Grab unique base domains from dnsmasq conf file
+	# Grab unique base domains from dnsmasq conf files
         echo "--> Fetching domains from $file_wildcards"
-        domains=$(awk -F '/' '{print $2}' $file_wildcards)
+	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
+		xargs -r0 grep -hE "^address=\/.+\/(0.0.0.0|::)$" |
+			awk -F'/' '{print $2}' |
+				sort -u)
 
-        # Conditional exit
+	 # Conditional exit
         if [ -z "$domains" ]; then
                 echo "--> No wildcards were captured from $file_wildcards"
                 return 1
@@ -109,7 +112,7 @@ process_wildcards () {
 	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
 
 	# Perform fixed string match for subdomains
-	echo "--> Identifying subdomains to remove from gravity.list"
+	echo "--> Identifying domains to remove from gravity.list"
 
 	# Find inverted matches for ^something.com$
 	# Find inverted matches for something.com$
@@ -119,22 +122,25 @@ process_wildcards () {
 	sed 's/^\^//g;s/\$$//g' |
 	sort)
 
+	# Status update
+        removal_count=$(($(wc -l <<< "$gravity_ps")-$(wc -l <<< "$new_gravity")))
+
 	# If there was an error populating new_gravity.list
-	if [ -z "$new_gravity" ]; then
-		echo "--> An issue occured when recreating gravity.list"
-		return 1
+	# Or there are no changes to be made
+	if [ -z "$new_gravity" ] || [ $removal_count = 0 ]; then
+		echo "--> No changes required."
+		return 0
+	else
+		echo "--> $removal_count unnecessary domains found"
+
 	fi
-
-	# Status update
-	removal_count=$(($(wc -l <<< "$gravity_ps")-$(wc -l <<< "$new_gravity")))
-	echo "--> $removal_count unnecessary domains found"
-
-	# Status update
-	echo "--> $(wc -l <<< "$new_gravity") domains in gravity.list"
 
 	# Output gravity.list
 	echo "--> Outputting $file_gravity"
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
+
+	# Status update
+        echo "--> $(wc -l <<< "$new_gravity") domains in gravity.list"
 
 	return 0
 }
@@ -146,7 +152,6 @@ finalise () {
 	# Refresh Pihole
 	echo "--> Sending SIGHUP to Pihole"
 	sudo killall -SIGHUP pihole-FTL
-
 }
 
 # Run gravity update
