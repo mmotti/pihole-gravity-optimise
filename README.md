@@ -1,29 +1,23 @@
 # Optimise Pihole's gravity.list
 
-The release of Pihole v4 introduces the ability to apply regex filtering alongside standard domain name blocking.
-
-Depending on your [regex entries](https://github.com/mmotti/pihole-regex), it could be that you currently have a significant amount of unnecessary domains in your `gravity.list` file (collation of domains from your host providers).
+If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex) filtering and/or DNSMASQ wildcards, then it's likely that your `gravity.list` contains far more domains than necessary.
 
 ### Example
 
+**Regex:**
+
 `^(.+[-_.])??ad[sxv]?[0-9]*[-_.]` matches **19,268** unnecessary entries in my `gravity.list` file.
 
-**Sample matches:**
+**DNSMASQ Wildcard:**
 
-```
-ads.thumbr.com
-ads.thzhost.com
-ads.tibaco.net
-ads.timesdaily.com
-ads.timesink.com
-ads.timesunion.com
-```
+`address=/302br.net/0.0.0.0` matches **16,327** unnecessary entries in my `gravity.list` file.
 
 ### What does the script do?
-1. Extracts the entries from your `regex.list` and `gravity.list` files
-1. Runs each regex match against the `gravity.list`
-1. Removes matches from `gravity.list`
-1. Refreshes Pihole config
+1. Identifies `gravity.list` entries that do not match items in your `regex.list`
+1. Identifies `gravity.list` entries that do not match items in any `DNSMASQ` conf files.
+1. Creates a new, optimised `gravity.list`
+
+
 
 ### Instructions
 1. All commands will need to be entered via Terminal (PuTTY or your SSH client of choice) after logging in. 
