@@ -20,8 +20,8 @@ If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex
 
 
 ### Instructions
-1. All commands will need to be entered via Terminal (PuTTY or your SSH client of choice) after logging in. 
-1. Each time `pihole -g` is ran, either through updates, automatic cron or manually, any entries that were previously removed by this script will be re-added.
+* All commands will need to be entered via Terminal (PuTTY or your SSH client of choice) after logging in. 
+* Each time `pihole -g` is ran, either through updates, automatic cron or manually, any entries that were previously removed by this script will be re-added.
 
 #### Installation
 ```
