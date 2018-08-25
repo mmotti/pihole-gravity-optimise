@@ -78,7 +78,7 @@ process_wildcards () {
 	echo "#### Wildcard Removals ####"
 
 	# Grab unique base domains from dnsmasq conf files
-        echo "--> Fetching domains from $file_wildcards"
+        echo "--> Fetching domains from $dir_wildcards"
 	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
 		xargs -r0 grep -hE "^address=\/.+\/(0.0.0.0|::)?$" |
 			awk -F'/' '{print $2}' |
@@ -86,11 +86,11 @@ process_wildcards () {
 
 	 # Conditional exit
         if [ -z "$domains" ]; then
-                echo "--> No wildcards were captured from $file_wildcards"
+                echo "--> No wildcards were captured from $dir_wildcards"
                 return 1
         fi
 
-        echo "--> $(wc -l <<< "$domains") wildcards in $file_wildcards"
+        echo "--> $(wc -l <<< "$domains") wildcards in $dir_wildcards"
 
 	# Add ^ prefix and $ suffix to gravity (for comparison)
 	echo "--> Processing $file_gravity"
@@ -107,7 +107,7 @@ process_wildcards () {
 	# Convert something.com to something.com$
 	# Convert something.com to ^something.com$
 	# for grep fixed-strings match
-	echo "--> Fetching removal criteria from $file_wildcards"
+	echo "--> Fetching removal criteria"
 	w_domain=$(sed 's/$/\$/g' <<< "$domains")
 	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
 
