@@ -28,47 +28,36 @@ process_regex ()
 	# Status update
 	echo "--> $(wc -l <<< "$regexList") regexps found"
 
-	# Read the pihole gravity list
-	echo "--> Reading gravity.list"
-
-	# Only read it if it exists and is not empty
-	if [ -s $file_out ]; then
-		gravityList=$(sort -u $file_gravity)
-	else
+	# Check gravity.list is not empty
+	if [ ! -s $file_gravity ]; then
 		echo "--> gravity.list is empty or does not exist"
 		return 1
 	fi
 
 	# Status update
-	echo "--> $(wc -l <<< "$gravityList") gravity.list entries"
-
-	# Create empty variable to store garbage
-	garbage_hosts=
+	echo "--> $(wc -l < $file_gravity) gravity.list entries"
 
 	echo "--> Identifying unnecessary domains"
 
 	# For each regex entry
 	# Add any regex matches to an array
-	while read -r regex; do
-		garbage_hosts+=$(grep -E $regex $file_gravity)
-	done <<< "$regexList"
 
-	# Remove any duplicates from unnecessary hosts
-	garbage_hosts=$(sort -u <<< "$garbage_hosts")
+	new_gravity=$(grep -vEf <(echo "$regexList") $file_gravity)
 
-	# Status update
-	echo "--> $(wc -l <<< "$garbage_hosts") unnecessary hosts identified"
-
-	# Remove unnecessary entries
-	echo "--> Removing unnecessary domains"
-	cleaned_hosts=$(comm -23 <(echo "$gravityList") <(echo "$garbage_hosts"))
+	if [ -z "$new_gravity" ] || [ $(wc -l <<< "$new_gravity") = 0 ]; then
+		echo "--> No unnecessary domains were found"
+		return 0
+	fi
 
 	# Status update
-	echo "--> gravity.list: $(wc -l <<< "$cleaned_hosts")"
+	echo "--> $(wc -l <<< "$new_gravity") unnecessary hosts identified"
 
 	# Output file
 	echo "--> Outputting $file_gravity"
-	echo "$cleaned_hosts" | sudo tee $file_gravity > /dev/null
+	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
+
+	# Status update
+	echo "--> $(wc -l <<< "$new_gravity") domains in gravity.list"
 
 	return 0
 }
@@ -130,10 +119,10 @@ process_wildcards () {
 	if [ -z "$new_gravity" ] || [ $removal_count = 0 ]; then
 		echo "--> No changes required."
 		return 0
-	else
-		echo "--> $removal_count unnecessary domains found"
-
 	fi
+
+	# Status update
+	echo "--> $removal_count unnecessary domains found"
 
 	# Output gravity.list
 	echo "--> Outputting $file_gravity"
