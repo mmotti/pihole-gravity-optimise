@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-\
+
 # Set file variables
 file_gravity="/etc/pihole/gravity.list"
 dir_wildcards="/etc/dnsmasq.d"
