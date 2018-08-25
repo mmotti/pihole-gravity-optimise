@@ -50,7 +50,7 @@ process_regex ()
 	fi
 
 	# Status update
-	echo "--> $(wc -l <<< "$new_gravity") unnecessary hosts identified"
+	echo "--> $(($(wc -l < $file_gravity)-$(wc -l <<< "$new_gravity"))) unnecessary hosts identified"
 
 	# Output file
 	echo "--> Outputting $file_gravity"
