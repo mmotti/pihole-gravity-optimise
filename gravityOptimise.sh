@@ -104,11 +104,11 @@ process_wildcards () {
 
 	echo "--> $(wc -l <<< "$gravity_ps") domains in gravity.list"
 
-	# Convert something.com to something.com$
+	# Convert something.com to .something.com$
 	# Convert something.com to ^something.com$
 	# for grep fixed-strings match
 	echo "--> Fetching removal criteria"
-	w_domain=$(sed 's/$/\$/g' <<< "$domains")
+	w_domain=$(sed 's/^/\./g;s/$/\$/g' <<< "$domains")
 	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
 
 	# Perform fixed string match for subdomains
