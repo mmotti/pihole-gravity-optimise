@@ -119,7 +119,7 @@ process_wildcards () {
 	# Remove prefix and suffix
 	new_gravity=$(grep -vFf <(echo "$w_domain") <<< "$gravity_ps" |
 	grep -vFf <(echo "$e_domain") |
-	sed 's/^\^//g;s/\$$//g' |
+	sed 's/[\^$]//g' |
 	sort)
 
 	# Status update
