@@ -80,7 +80,7 @@ process_wildcards () {
 	# Grab unique base domains from dnsmasq conf files
         echo "--> Fetching domains from $file_wildcards"
 	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
-		xargs -r0 grep -hE "^address=\/.+\/(0.0.0.0|::)$" |
+		xargs -r0 grep -hE "^address=\/.+\/(0.0.0.0|::)?$" |
 			awk -F'/' '{print $2}' |
 				sort -u)
 
