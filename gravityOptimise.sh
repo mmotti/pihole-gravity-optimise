@@ -21,30 +21,29 @@ process_wildcards () {
 
 	echo "#### Wildcard Removals ####"
 
-
 	# Check gravity.list is not empty
-        if [ ! -s $file_gravity ]; then
-                echo "--> gravity.list is empty or does not exist"
-                return 1
-        fi
+	if [ ! -s $file_gravity ]; then
+			echo "--> gravity.list is empty or does not exist"
+			return 1
+	fi
 
 	# Fetch initial gravity count
 	count_gravity=$(wc -l < $file_gravity)
 
 	# Grab unique base domains from dnsmasq conf files
-        echo "--> Fetching wildcards from $dir_wildcards"
+	echo "--> Fetching wildcards from $dir_wildcards"
 	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
 		xargs -r0 grep -hE "^address=\/.+\/(([0-9]\.){3}[0-9]|::)?$" |
 			cut -d'/' -f2 |
 				sort -u)
 
 	# Conditional exit
-        if [ -z "$domains" ]; then
-                echo "--> No wildcards were captured from $dir_wildcards"
-                return 1
-        fi
+	if [ -z "$domains" ]; then
+			echo "--> No wildcards were captured from $dir_wildcards"
+			return 1
+	fi
 
-        echo "--> $(wc -l <<< "$domains") wildcards found"
+	echo "--> $(wc -l <<< "$domains") wildcards found"
 
 	# Add ^ prefix and $ suffix to gravity (for comparison)
 	echo "--> Processing $file_gravity"
@@ -69,7 +68,7 @@ process_wildcards () {
 	sort)
 
 	# Status update
-        removal_count=$(($count_gravity-$(wc -l <<< "$new_gravity")))
+	removal_count=$(($count_gravity-$(wc -l <<< "$new_gravity")))
 
 	# If there was an error populating new_gravity.list
 	# Or no changes need to be made
@@ -86,7 +85,7 @@ process_wildcards () {
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
 
 	# Status update
-        echo "--> $(wc -l < $file_gravity) domains in gravity.list"
+	echo "--> $(wc -l < $file_gravity) domains in gravity.list"
 
 	return 0
 }
@@ -96,13 +95,13 @@ process_regex ()
 	echo "#### Regex Removals ####"
 
 	# Check gravity.list is not empty
-        if [ ! -s $file_gravity ]; then
-                echo "--> gravity.list is empty or does not exist"
-                return 1
-        fi
+	if [ ! -s $file_gravity ]; then
+			echo "--> gravity.list is empty or does not exist"
+			return 1
+	fi
 
-        # Count gravity entries
-        count_gravity=$(wc -l < $file_gravity)
+	# Count gravity entries
+	count_gravity=$(wc -l < $file_gravity)
 
 	# Only read it if it exists and is not empty
 	if [ -s $file_regex ]; then
