@@ -33,7 +33,7 @@ process_wildcards () {
 	# Grab unique base domains from dnsmasq conf files
 	echo "--> Fetching wildcards from $dir_wildcards"
 	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
-		xargs -r0 grep -hE "^address=\/.+\/(([0-9]\.){3}[0-9]|::)?$" |
+		xargs -r0 grep -hE "^address=\/.+\/(([0-9]+\.){3}[0-9]+|::)?$" |
 			cut -d'/' -f2 |
 				sort -u)
 
