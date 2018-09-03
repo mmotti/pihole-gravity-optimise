@@ -5,10 +5,36 @@ file_gravity="/etc/pihole/gravity.list"
 dir_wildcards="/etc/dnsmasq.d"
 file_regex="/etc/pihole/regex.list"
 
+invertMatchConflicts () {
+
+	# Conditional exit
+	# Return supplied match criteria (all domains)
+	if [ -z "$1" ] || [ -z "$2" ]; then
+		echo "$2"
+		return 1
+	fi
+
+	# Convert target - something.com -> ^something.com$
+        match_target=$(sed 's/^/\^/;s/$/\$/' <<< "$2")
+        # Convert exact domains (pattern source) - something.com -> ^something.com$
+        exact_domains=$(sed 's/^/\^/;s/$/\$/' <<< "$1")
+        # Convert wildcard domains (pattern source) - something.com - .something.com$
+        wildcard_domains=$(sed 's/^/\./;s/$/\$/' <<< "$1")
+	# Combine exact and wildcard matches
+        match_patterns=$(printf '%s\n' "$exact_domains" "$wildcard_domains")
+
+	# Invert match wildcards
+        # Invert match exact domains
+        # Remove start / end markers
+        grep -vFf <(echo "$match_patterns") <<< "$match_target" |
+			sed 's/[\^$]//g'
+}
+
 pihole_update ()
 {
 	echo "#### Gravity List ####"
 
+	# Update gravity.list
 	echo "--> Updating gravity.list"
 	pihole updateGravity > /dev/null
 	# Count gravity entries
@@ -45,27 +71,13 @@ process_wildcards () {
 
 	echo "--> $(wc -l <<< "$domains") wildcards found"
 
-	# Add ^ prefix and $ suffix to gravity (for comparison)
-	echo "--> Processing $file_gravity"
-	gravity_ps=$(sed 's/^/\^/g;s/$/\$/g' $file_gravity)
+	# Read gravity.list
+	echo "--> Reading $file_gravity"
+	gravity_contents=$(cat $file_gravity)
 
-	# Convert something.com to .something.com$
-	# Convert something.com to ^something.com$
-	# for grep fixed-strings match
-	echo "--> Fetching removal criteria"
-	w_domain=$(sed 's/^/\./g;s/$/\$/g' <<< "$domains")
-	e_domain=$(sed 's/^/\^/g;s/$/\$/g' <<< "$domains")
-
-	# Perform fixed string match for subdomains
-	echo "--> Identifying domains to remove from gravity.list"
-
-	# Find inverted matches for ^something.com$
-	# Find inverted matches for something.com$
-	# Remove prefix and suffix
-	new_gravity=$(grep -vFf <(echo "$w_domain") <<< "$gravity_ps" |
-	grep -vFf <(echo "$e_domain") |
-	sed 's/[\^$]//g' |
-	sort)
+	# Invert match wildcards against gravity.list
+	echo "--> Removing wildcard matches"
+	new_gravity=$(invertMatchConflicts "$domains" "$gravity_contents")
 
 	# Status update
 	removal_count=$(($count_gravity-$(wc -l <<< "$new_gravity")))
@@ -114,13 +126,12 @@ process_regex ()
 	# Status update
 	echo "--> $(wc -l <<< "$regexList") regexps found"
 
-	echo "--> Identifying unnecessary domains (this may take a while)"
-
-	# For each regex entry
-	# Add any regex matches to an array
+	# Invert match regex patterns against gravity.list
+	echo "--> Identifying unnecessary domains"
 
 	new_gravity=$(grep -vEf <(echo "$regexList") $file_gravity)
 
+	# If there are no domains after regex removals
 	if [ -z "$new_gravity" ]; then
 		echo "--> No unnecessary domains were found"
 		return 0
