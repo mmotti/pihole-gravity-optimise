@@ -35,12 +35,12 @@ pihole_update ()
 	echo "#### Gravity List ####"
 
 	# Update gravity.list
-	echo "--> Updating gravity.list"
+	echo "[i] Updating gravity.list"
 	pihole updateGravity > /dev/null
 	# Count gravity entries
 	count_gravity=$(wc -l < $file_gravity)
 	# Status update
-	echo "--> $count_gravity gravity list entries"
+	echo "[i] $count_gravity gravity list entries"
 }
 
 process_wildcards () {
@@ -49,7 +49,7 @@ process_wildcards () {
 
 	# Check gravity.list is not empty
 	if [ ! -s $file_gravity ]; then
-			echo "--> gravity.list is empty or does not exist"
+			echo "[i] gravity.list is empty or does not exist"
 			return 1
 	fi
 
@@ -57,7 +57,7 @@ process_wildcards () {
 	count_gravity=$(wc -l < $file_gravity)
 
 	# Grab unique base domains from dnsmasq conf files
-	echo "--> Fetching wildcards from $dir_wildcards"
+	echo "[i] Fetching wildcards from $dir_wildcards"
 	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
 		xargs -r0 grep -hE "^address=\/.+\/(([0-9]+\.){3}[0-9]+|::)?$" |
 			cut -d'/' -f2 |
@@ -65,18 +65,18 @@ process_wildcards () {
 
 	# Conditional exit
 	if [ -z "$domains" ]; then
-			echo "--> No wildcards were captured from $dir_wildcards"
+			echo "[i] No wildcards were captured from $dir_wildcards"
 			return 1
 	fi
 
-	echo "--> $(wc -l <<< "$domains") wildcards found"
+	echo "[i] $(wc -l <<< "$domains") wildcards found"
 
 	# Read gravity.list
-	echo "--> Reading $file_gravity"
+	echo "[i] Reading $file_gravity"
 	gravity_contents=$(cat $file_gravity)
 
 	# Invert match wildcards against gravity.list
-	echo "--> Removing wildcard matches"
+	echo "[i] Removing wildcard matches"
 	new_gravity=$(invertMatchConflicts "$domains" "$gravity_contents")
 
 	# Status update
@@ -85,19 +85,19 @@ process_wildcards () {
 	# If there was an error populating new_gravity.list
 	# Or no changes need to be made
 	if [ -z "$new_gravity" ] || [ "$removal_count" = 0 ]; then
-		echo "--> No changes required."
+		echo "[i] No changes required."
 		return 0
 	fi
 
 	# Status update
-	echo "--> $removal_count unnecessary domains found"
+	echo "[i] $removal_count unnecessary domains found"
 
 	# Output gravity.list
-	echo "--> Outputting $file_gravity"
+	echo "[i] Outputting $file_gravity"
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
 
 	# Status update
-	echo "--> $(wc -l < $file_gravity) domains in gravity.list"
+	echo "[i] $(wc -l < $file_gravity) domains in gravity.list"
 
 	return 0
 }
@@ -108,7 +108,7 @@ process_regex ()
 
 	# Check gravity.list is not empty
 	if [ ! -s $file_gravity ]; then
-			echo "--> gravity.list is empty or does not exist"
+			echo "[i] gravity.list is empty or does not exist"
 			return 1
 	fi
 
@@ -119,33 +119,33 @@ process_regex ()
 	if [ -s $file_regex ]; then
 		regexList=$(grep '^[^#]' $file_regex)
 	else
-		echo "--> Regex list is empty or does not exist."
+		echo "[i] Regex list is empty or does not exist."
 		return 1
 	fi
 
 	# Status update
-	echo "--> $(wc -l <<< "$regexList") regexps found"
+	echo "[i] $(wc -l <<< "$regexList") regexps found"
 
 	# Invert match regex patterns against gravity.list
-	echo "--> Identifying unnecessary domains"
+	echo "[i] Identifying unnecessary domains"
 
 	new_gravity=$(grep -vEf <(echo "$regexList") $file_gravity)
 
 	# If there are no domains after regex removals
 	if [ -z "$new_gravity" ]; then
-		echo "--> No unnecessary domains were found"
+		echo "[i] No unnecessary domains were found"
 		return 0
 	fi
 
 	# Status update
-	echo "--> $(($count_gravity-$(wc -l <<< "$new_gravity"))) unnecessary hosts identified"
+	echo "[i] $(($count_gravity-$(wc -l <<< "$new_gravity"))) unnecessary hosts identified"
 
 	# Output file
-	echo "--> Outputting $file_gravity"
+	echo "[i] Outputting $file_gravity"
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
 
 	# Status update
-	echo "--> $(wc -l < $file_gravity) domains in gravity.list"
+	echo "[i] $(wc -l < $file_gravity) domains in gravity.list"
 
 	return 0
 }
@@ -155,7 +155,7 @@ finalise () {
 	echo "#### Finalise changes ####"
 
 	# Refresh Pihole
-	echo "--> Sending SIGHUP to Pihole"
+	echo "[i] Sending SIGHUP to Pihole"
 	sudo killall -SIGHUP pihole-FTL
 }
 
