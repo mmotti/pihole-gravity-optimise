@@ -32,7 +32,7 @@ invertMatchConflicts () {
 
 pihole_update ()
 {
-	echo "[i] # Gravity"
+	echo "# Gravity"
 
 	# Update gravity.list
 	echo "[i] Updating gravity.list"
@@ -45,7 +45,7 @@ pihole_update ()
 
 process_wildcards () {
 
-	echo "[i] # Wildcards" 
+	echo "# Wildcards"
 
 	# Check gravity.list is not empty
 	if [ ! -s $file_gravity ]; then
@@ -104,7 +104,7 @@ process_wildcards () {
 
 process_regex ()
 {
-	echo "[i] # Regexps"
+	echo "# Regexps"
 
 	# Check gravity.list is not empty
 	if [ ! -s $file_gravity ]; then
@@ -152,7 +152,7 @@ process_regex ()
 
 finalise () {
 
-	echo "[i] # Finalise"
+	echo "# Finalise"
 
 	# Refresh Pihole
 	echo "[i] Sending SIGHUP to Pihole"
