@@ -28,7 +28,7 @@ if [ ! -z "$existing_wildcards" ]; then
 	# Convert wildcard domains (pattern source) - something.com - .something.com$
 	match_wildcard=$(sed 's/^/\./;s/$/\$/' <<< "$existing_wildcards")
 	# Convert target - something.com -> ^something.com$
-    match_target=$(sed 's/^/\^/;s/$/\$/' <(cat $file_gravity))
+	match_target=$(sed 's/^/\^/;s/$/\$/' <(cat $file_gravity))
 	# Compile the exact and wildcard match patterns
 	match_patterns=$(printf '%s\n' "$match_exact" "$match_wildcard")
 	# Invert match patterns	
