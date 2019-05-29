@@ -1,169 +1,56 @@
 #!/usr/bin/env bash
 
 # Set file variables
-file_gravity="/etc/pihole/gravity.list"
-dir_wildcards="/etc/dnsmasq.d"
-file_regex="/etc/pihole/regex.list"
+file_gravity='/etc/pihole/gravity.list'
+dir_dnsmasq='/etc/dnsmasq.d'
+file_regex='/etc/pihole/regex.list'
 
-invertMatchConflicts () {
+# Update gravity.list
+echo "[i] Updating gravity.list"
+pihole updateGravity > /dev/null
+num_gravity_before=$(cat $file_gravity | wc -l)
 
-	# Conditional exit
-	# Return supplied match criteria (all domains)
-	if [ -z "$1" ] || [ -z "$2" ]; then
-		echo "$2"
-		return 1
-	fi
+# Conditional exit if gravity.list is empty
+[ ! -s "$file_gravity" ] && echo 'gravity.list is empty / not found' && exit
 
+# Identify existing local wildcards
+echo '[i] Parsing existing wildcard config (DNSMASQ)'
+existing_wildcards=$(find $dir_dnsmasq -type f -name '*.conf' -not -name 'filter_lists.conf' -print0 |
+	xargs -r0 grep -hE '^address=\/.+\/(([0-9]{1,3}\.){3}[0-9]{1,3}|::|#)?$' |
+		cut -d '/' -f2 |
+			sort -u)
+			
+if [ ! -z "$existing_wildcards" ]; then
+	# If there are existing wildcards
+	echo '[i] Removing wildcard matches in gravity.list'
+	# Convert exact domains (pattern source) - something.com -> ^something.com$
+	match_exact=$(sed 's/^/\^/;s/$/\$/' <<< "$existing_wildcards")
+	# Convert wildcard domains (pattern source) - something.com - .something.com$
+	match_wildcard=$(sed 's/^/\./;s/$/\$/' <<< "$existing_wildcards")
 	# Convert target - something.com -> ^something.com$
-        match_target=$(sed 's/^/\^/;s/$/\$/' <<< "$2")
-        # Convert exact domains (pattern source) - something.com -> ^something.com$
-        exact_domains=$(sed 's/^/\^/;s/$/\$/' <<< "$1")
-        # Convert wildcard domains (pattern source) - something.com - .something.com$
-        wildcard_domains=$(sed 's/^/\./;s/$/\$/' <<< "$1")
-	# Combine exact and wildcard matches
-        match_patterns=$(printf '%s\n' "$exact_domains" "$wildcard_domains")
-
-	# Invert match wildcards
-        # Invert match exact domains
-        # Remove start / end markers
-        grep -vFf <(echo "$match_patterns") <<< "$match_target" |
-			sed 's/[\^$]//g'
-}
-
-pihole_update ()
-{
-	echo "# Gravity"
-
-	# Update gravity.list
-	echo "[i] Updating gravity.list"
-	pihole updateGravity > /dev/null
-	# Count gravity entries
-	count_gravity=$(wc -l < $file_gravity)
-	# Status update
-	echo "[i] $count_gravity gravity list entries"
-}
-
-process_wildcards () {
-
-	echo "# Wildcards"
-
-	# Check gravity.list is not empty
-	if [ ! -s $file_gravity ]; then
-			echo "[i] gravity.list is empty or does not exist"
-			return 1
-	fi
-
-	# Fetch initial gravity count
-	count_gravity=$(wc -l < $file_gravity)
-
-	# Grab unique base domains from dnsmasq conf files
-	echo "[i] Fetching wildcards from $dir_wildcards"
-	domains=$(find $dir_wildcards -name "*.conf" -type f -print0 |
-		xargs -r0 grep -hE "^address=\/.+\/(([0-9]+\.){3}[0-9]+|::|#)?$" |
-			cut -d'/' -f2 |
-				sort -u)
-
-	# Conditional exit
-	if [ -z "$domains" ]; then
-			echo "[i] No wildcards were captured from $dir_wildcards"
-			return 1
-	fi
-
-	echo "[i] $(wc -l <<< "$domains") wildcards found"
-
-	# Read gravity.list
-	echo "[i] Reading $file_gravity"
-	gravity_contents=$(cat $file_gravity)
-
-	# Invert match wildcards against gravity.list
-	echo "[i] Removing wildcard matches"
-	new_gravity=$(invertMatchConflicts "$domains" "$gravity_contents")
-
-	# Status update
-	removal_count=$(($count_gravity-$(wc -l <<< "$new_gravity")))
-
-	# If there was an error populating new_gravity.list
-	# Or no changes need to be made
-	if [ -z "$new_gravity" ] || [ "$removal_count" = 0 ]; then
-		echo "[i] No changes required."
-		return 0
-	fi
-
-	# Status update
-	echo "[i] $removal_count unnecessary domains found"
-
-	# Output gravity.list
-	echo "[i] Outputting $file_gravity"
+    match_target=$(sed 's/^/\^/;s/$/\$/' <(cat $file_gravity))
+	# Compile the exact and wildcard match patterns
+	match_patterns=$(printf '%s\n' "$match_exact" "$match_wildcard")
+	# Invert match patterns	
+	new_gravity=$(grep -vFf <(echo "$match_patterns") <<< "$match_target" | sed 's/[\^$]//g')
+	# Output to gravity.list
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
+fi
 
-	# Status update
-	echo "[i] $(wc -l < $file_gravity) domains in gravity.list"
-
-	return 0
-}
-
-process_regex ()
-{
-	echo "# Regexps"
-
-	# Check gravity.list is not empty
-	if [ ! -s $file_gravity ]; then
-			echo "[i] gravity.list is empty or does not exist"
-			return 1
-	fi
-
-	# Count gravity entries
-	count_gravity=$(wc -l < $file_gravity)
-
-	# Only read it if it exists and is not empty
-	if [ -s $file_regex ]; then
-		regexList=$(grep '^[^#]' $file_regex)
-	else
-		echo "[i] Regex list is empty or does not exist."
-		return 1
-	fi
-
-	# Status update
-	echo "[i] $(wc -l <<< "$regexList") regexps found"
-
-	# Invert match regex patterns against gravity.list
-	echo "[i] Identifying unnecessary domains"
-
-	new_gravity=$(grep -vEf <(echo "$regexList") $file_gravity)
-
-	# If there are no domains after regex removals
-	if [ -z "$new_gravity" ]; then
-		echo "[i] No unnecessary domains were found"
-		return 0
-	fi
-
-	# Status update
-	echo "[i] $(($count_gravity-$(wc -l <<< "$new_gravity"))) unnecessary hosts identified"
-
-	# Output file
-	echo "[i] Outputting $file_gravity"
+if [ -s "$file_regex" ]; then
+	echo '[i] Removing regex.list matches'
+	# Remove comments from regex file
+	regexps=$(grep '^[^#]' $file_regex)
+	# Invert match regex.list
+	new_gravity=$(grep -vEf <(echo "$regexps") $file_gravity)
+	# Output to gravity.list
 	echo "$new_gravity" | sudo tee $file_gravity > /dev/null
+fi
 
-	# Status update
-	echo "[i] $(wc -l < $file_gravity) domains in gravity.list"
+# Some status
+num_gravity_after=$(cat $file_gravity | wc -l)
+echo "[i] $(($num_gravity_before-$num_gravity_after)) gravity.list entries removed"
 
-	return 0
-}
-
-finalise () {
-
-	echo "# Finalise"
-
-	# Refresh Pihole
-	echo "[i] Sending SIGHUP to Pihole"
-	sudo killall -SIGHUP pihole-FTL
-}
-
-# Run gravity update
-pihole_update
-# Process wildcard removals
-process_wildcards
-# Process regex removals
-process_regex
-# Finish up
-finalise
+# Refresh pi-hole
+echo "[i] Sending SIGHUP to Pihole"
+sudo killall -SIGHUP pihole-FTL
