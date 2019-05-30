@@ -8,7 +8,7 @@ file_regex='/etc/pihole/regex.list'
 # Update gravity.list
 echo "[i] Updating gravity.list"
 pihole updateGravity > /dev/null
-num_gravity_before=$(cat $file_gravity | wc -l)
+num_gravity_before=$(wc -l < $file_gravity)
 
 # Conditional exit if gravity.list is empty
 [ ! -s "$file_gravity" ] && echo 'gravity.list is empty / not found' && exit
@@ -19,8 +19,8 @@ existing_wildcards=$(find $dir_dnsmasq -type f -name '*.conf' -print0 |
 	xargs -r0 grep -hE '^address=\/.+\/(([0-9]{1,3}\.){3}[0-9]{1,3}|::|#)?$' |
 		cut -d '/' -f2 |
 			sort -u)
-			
-if [ ! -z "$existing_wildcards" ]; then
+
+if [ -n "$existing_wildcards" ]; then
 	# If there are existing wildcards
 	echo '[i] Removing wildcard matches in gravity.list'
 	# Convert exact domains (pattern source) - something.com -> ^something.com$
@@ -48,8 +48,8 @@ if [ -s "$file_regex" ]; then
 fi
 
 # Some status
-num_gravity_after=$(cat $file_gravity | wc -l)
-echo "[i] $(($num_gravity_before-$num_gravity_after)) gravity.list entries removed"
+num_gravity_after=$(wc -l < $file_gravity)
+echo "[i] $((num_gravity_before-num_gravity_after)) gravity.list entries removed"
 
 # Refresh pi-hole
 echo "[i] Sending SIGHUP to Pihole"
