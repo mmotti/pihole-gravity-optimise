@@ -75,7 +75,7 @@ fi
 str_regex=$(fetchTable "regex")
 
 # Grab gravity count pre-processing
-num_gravity_before=$(wc -l < "$file_gravity_tmp")
+num_gravity_before=$(wc -l < "${file_gravity_tmp}")
 
 # Identify existing local wildcards
 echo '[i] Parsing existing wildcard config (DNSMASQ)'
@@ -111,7 +111,7 @@ if [[ -n "${str_regex}" ]]; then
 	# Remove comments from regex file
 	regexps=$(grep '^[^#]' <<< "${str_regex}")
 	# Invert match regex.list
-	str_gravity=$(grep -vEf <(echo "${regexps}") <(echo "{$str_gravity}"))
+	str_gravity=$(grep -vEf <(echo "${regexps}") "${file_gravity_tmp}")
 
 	# Conditional exit
 	if [[ -n "${str_gravity}" ]]; then
