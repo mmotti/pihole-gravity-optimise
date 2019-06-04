@@ -1,21 +1,21 @@
-# Optimise Pihole's gravity.list
+# Optimise Pihole's gravity database
 
-If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex) filtering and/or DNSMASQ wildcards, then it's likely that your `gravity.list` contains far more domains than necessary.
+If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex) filtering and/or DNSMASQ wildcards, then it's likely that your `gravity` table contains far more domains than necessary.
 
 ### Example
 
 **Regex:**
 
-`^(.+[-_.])??ad[sxv]?[0-9]*[-_.]` matches **19,268** unnecessary entries in my `gravity.list` file.
+`^(.+[-_.])??ad[sxv]?[0-9]*[-_.]` matches **19,268** unnecessary entries in my `gravity` table.
 
 **DNSMASQ Wildcard:**
 
-`address=/302br.net/0.0.0.0` matches **16,327** unnecessary entries in my `gravity.list` file.
+`address=/302br.net/#` matches **16,327** unnecessary entries in my `gravity` table.
 
 ### What does the script do?
-1. Identifies `gravity.list` entries that do not match items in your `regex.list`
-1. Identifies `gravity.list` entries that do not match items in any `DNSMASQ` conf files.
-1. Creates a new, optimised `gravity.list`
+1. Identifies `gravity` table entries that do not match items in the `regex` table
+1. Identifies `gravity` table entries that do not match items in any `DNSMASQ` conf files.
+1. Creates a new, optimised `gravity` table
 
 
 
@@ -37,7 +37,7 @@ exit
 #### Manually running the gravityOptimise script
 `gravityOptimise.sh`
 
-#### Add entries back to `gravity.list`
+#### Add entries back to `gravity` table
 `pihole -g`
 
 #### Removing the script
