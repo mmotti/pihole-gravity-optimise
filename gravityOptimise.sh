@@ -4,14 +4,22 @@
 # Set file variables
 db_gravity='/etc/pihole/gravity.db'
 dir_dnsmasq='/etc/dnsmasq.d'
+file_gravity='/etc/pihole/gravity.list'
+file_regex='/etc/pihole/regex.list'
 file_gravity_tmp='/etc/pihole/gravity.list.tmp'
+usingDB=false
+
+# Check for Pi-hole DB
+if [[ -e "${db_gravity}" ]] || [[ -s "${db_gravity}" ]]; then
+	echo '[i] Pi-hole DB detected'
+	usingDB=true
+fi
 
 # Functions
 function fetchTable {
 
-	local table queryStr
+	local table="${1}" queryStr
 
-	table="${1}"
 	queryStr="Select domain FROM vw_${table};"
 
 	sqlite3 ${db_gravity} "${queryStr}"
@@ -23,10 +31,7 @@ function updateGravity {
 
 	# Code here is adapted from /opt/pihole/gravity.sh
 
-	local file_gravity_tmp table
-
-	file_gravity_tmp="${1}"
-	table='gravity'
+	local file_gravity_tmp="${1}" table='gravity'
 
 	# Another conditional exit
 	if [[ ! -e "${file_gravity_tmp}" ]] || [[ ! -s "${file_gravity_tmp}" ]]; then
@@ -46,33 +51,26 @@ function updateGravity {
 
 	[[ "${status}" -ne  0 ]] && echo '[i] Unable to load entries into gravity' && exit 1
 
-	# Remove temp gravity file
-	sudo rm -f "${file_gravity_tmp}"
-
 	return
 }
-
-# Conditional exit
-if [[ ! -e "${db_gravity}" ]] || [[ ! -s "${db_gravity}" ]]; then
-	echo '[i] You have not yet migrated to the pi-hole database. Please run the old script.'; exit 1
-fi
 
 # Update gravity.list
 echo '[i] Updating gravity.list'
 pihole updateGravity > /dev/null
 
-# Save gravity to temp file
-str_gravity=$(fetchTable "gravity")
+# Conditional fetch for gravity domains
+if [[ $usingDB == true ]]; then
+	str_gravity=$(fetchTable "gravity")
+else
+	str_gravity=$(cat "${file_gravity}")
+fi
 
 # Output if result returned
 if [[ -n "${str_gravity}" ]]; then
 	echo "${str_gravity}" | sudo tee "${file_gravity_tmp}" > /dev/null
 else
-	echo '[i] No results returned from gravity db'; exit 1;
+	echo '[i] No gravity domains were found'; exit 1;
 fi
-
-# Save regex in str
-str_regex=$(fetchTable "regex")
 
 # Grab gravity count pre-processing
 num_gravity_before=$(wc -l < "${file_gravity_tmp}")
@@ -84,8 +82,8 @@ existing_wildcards=$(find "${dir_dnsmasq}" -type f -name '*.conf' -print0 |
 		cut -d '/' -f2 |
 			sort -u)
 
+# If there are existing wildcards
 if [[ -n "${existing_wildcards}" ]]; then
-	# If there are existing wildcards
 	echo '[i] Removing wildcard matches in gravity.list'
 	# Convert exact domains (pattern source) - something.com -> ^something.com$
 	match_exact=$(sed 's/^/\^/;s/$/\$/' <<< "${existing_wildcards}")
@@ -106,13 +104,18 @@ if [[ -n "${existing_wildcards}" ]]; then
 	fi
 fi
 
+# Conditional fetch for regex filters
+if [[ $usingDB == true ]]; then
+	str_regex=$(fetchTable "regex")
+else
+	[[ -s "${file_regex}" ]] && str_regex=$(grep '^[^#]' "${file_regex}")
+fi
+
+# If there are regexps
 if [[ -n "${str_regex}" ]]; then
 	echo '[i] Removing regex.list matches'
-	# Remove comments from regex file
-	regexps=$(grep '^[^#]' <<< "${str_regex}")
 	# Invert match regex.list
-	str_gravity=$(grep -vEf <(echo "${regexps}") "${file_gravity_tmp}")
-
+	str_gravity=$(grep -vEf <(echo "${str_regex}") "${file_gravity_tmp}")
 	# Conditional exit
 	if [[ -n "${str_gravity}" ]]; then
 		echo "${str_gravity}" | sudo tee "${file_gravity_tmp}" > /dev/null
@@ -121,12 +124,27 @@ if [[ -n "${str_regex}" ]]; then
 	fi
 fi
 
-# Update gravity DB
-echo '[i] Updating gravity table'
-updateGravity "${file_gravity_tmp}"
+# Save changes to gravity
+echo '[i] Updating gravity'
+# Conditional save for gravity
+if [[ $usingDB == true ]]; then
+	updateGravity "${file_gravity_tmp}"
+else
+	sudo mv "${file_gravity_tmp}" "${file_gravity}"
+fi
 
-# Some status
-str_gravity=$(fetchTable "gravity")
+# Remove temp files
+echo '[i] Removing temp files'
+[[ -e "${file_gravity_tmp}" ]] && sudo rm -f "${file_gravity_tmp}"
+
+# Conditional fetch of updated gravity domains
+if [[ $usingDB == true ]]; then
+	str_gravity=$(fetchTable "gravity")
+else
+	str_gravity=$(cat "${file_gravity}")
+fi
+
+# Some stats
 num_gravity_after=$(wc -l <<< "${str_gravity}")
 echo "[i] $((num_gravity_before-num_gravity_after)) gravity entries removed"
 
