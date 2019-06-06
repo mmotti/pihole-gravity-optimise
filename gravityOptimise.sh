@@ -9,7 +9,7 @@ file_regex='/etc/pihole/regex.list'
 usingDB=false
 
 # Check for Pi-hole DB
-if [[ -e "${db_gravity}" ]] || [[ -s "${db_gravity}" ]]; then
+if [[ -e "${db_gravity}" ]] && [[ -s "${db_gravity}" ]]; then
 	echo '[i] Pi-hole DB detected'
 	usingDB=true
 fi
