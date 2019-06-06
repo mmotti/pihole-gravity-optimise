@@ -9,7 +9,7 @@ file_regex='/etc/pihole/regex.list'
 usingDB=false
 
 # Check for Pi-hole DB
-if [[ -e "${db_gravity}" ]] && [[ -s "${db_gravity}" ]]; then
+if [[ -s "${db_gravity}" ]]; then
 	echo '[i] Pi-hole DB detected'
 	usingDB=true
 fi
@@ -36,7 +36,7 @@ function updateGravity {
 	local file_gravity_tmp="${1}" table='gravity'
 
 	# Another conditional exit
-	if [[ ! -e "${file_gravity_tmp}" ]] || [[ ! -s "${file_gravity_tmp}" ]]; then
+	if [[ ! -s "${file_gravity_tmp}" ]]; then
 		echo "[i] Unable to process ${file_gravity_tmp}"
 		exit 1
 	fi
