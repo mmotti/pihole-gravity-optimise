@@ -29,7 +29,7 @@ function fetchTable {
 	return
 }
 
-function updateGravity {
+function updateGravityDB {
 
 	# Code here is adapted from /opt/pihole/gravity.sh
 
@@ -133,7 +133,7 @@ fi
 echo '[i] Updating gravity database'
 # Conditional save for gravity
 if [[ $usingDB == true ]]; then
-	updateGravity "${file_gravity_tmp}"
+	updateGravityDB "${file_gravity_tmp}"
 else
 	# Overwrite gravity.list
 	sudo cp "${file_gravity_tmp}" "${file_gravity}"
