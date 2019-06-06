@@ -150,8 +150,8 @@ else
 fi
 
 # Refresh pi-hole
-echo "[i] Sending SIGHUP to Pihole"
-sudo killall -SIGHUP pihole-FTL
+echo "[i] Refreshing to Pihole"
+pihole restartdns reload > /dev/null
 
 # Some stats
 num_gravity_after=$(wc -l <<< "${str_gravity}")
