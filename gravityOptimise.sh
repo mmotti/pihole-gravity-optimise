@@ -135,7 +135,10 @@ echo '[i] Updating gravity database'
 if [[ $usingDB == true ]]; then
 	updateGravity "${file_gravity_tmp}"
 else
-	sudo mv "${file_gravity_tmp}" "${file_gravity}"
+	# Overwrite gravity.list
+	sudo cp "${file_gravity_tmp}" "${file_gravity}"
+	# Remove temp file
+	rm -f "${file_gravity_tmp}"
 fi
 
 # Remove temp files
