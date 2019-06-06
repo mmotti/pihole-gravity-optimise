@@ -153,7 +153,7 @@ else
 fi
 
 # Refresh pi-hole
-echo "[i] Refreshing to Pihole"
+echo "[i] Refreshing Pihole"
 pihole restartdns reload > /dev/null
 
 # Some stats
