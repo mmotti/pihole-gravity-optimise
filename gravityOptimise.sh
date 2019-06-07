@@ -89,7 +89,7 @@ existing_wildcards=$(find "${dir_dnsmasq}" -type f -name '*.conf' -print0 |
 
 # If there are existing wildcards
 if [[ -n "${existing_wildcards}" ]]; then
-	echo '[i] Removing wildcard matches in gravity.list'
+	echo '[i] Removing wildcard matches from gravity'
 	# Convert exact domains (pattern source) - something.com -> ^something.com$
 	match_exact=$(sed 's/^/\^/;s/$/\$/' <<< "${existing_wildcards}")
 	# Convert wildcard domains (pattern source) - something.com - .something.com$
@@ -118,7 +118,7 @@ fi
 
 # If there are regexps
 if [[ -n "${str_regex}" ]]; then
-	echo '[i] Removing regex.list matches'
+	echo '[i] Removing regex matches from gravity'
 	# Invert match regex.list
 	str_gravity=$(grep -vEf <(echo "${str_regex}") "${file_gravity_tmp}")
 	# Conditional exit
