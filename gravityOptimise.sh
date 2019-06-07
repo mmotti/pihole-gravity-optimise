@@ -56,8 +56,8 @@ function updateGravityDB {
 	return
 }
 
-# Update gravity.list
-echo '[i] Updating gravity.list'
+# Update gravity
+echo '[i] Updating gravity'
 pihole updateGravity > /dev/null
 
 # Conditional fetch for gravity domains
@@ -119,7 +119,7 @@ fi
 # If there are regexps
 if [[ -n "${str_regex}" ]]; then
 	echo '[i] Removing regex matches from gravity'
-	# Invert match regex.list
+	# Invert match regex
 	str_gravity=$(grep -vEf <(echo "${str_regex}") "${file_gravity_tmp}")
 	# Conditional exit
 	if [[ -n "${str_gravity}" ]]; then
