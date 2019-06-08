@@ -24,9 +24,9 @@ function fetchTable {
 	sqlite3 ${db_gravity} "${queryStr}" 2>&1
 	# Check exit status
 	status="$?"
-	[[ "${status}" -ne 0 ]]  && { (>&2 echo '[i] An error occured whilst fetching results'); exit 1; }
+	[[ "${status}" -ne 0 ]]  && { (>&2 echo '[i] An error occured whilst fetching results'); return 1; }
 
-	return
+	return 0
 }
 
 function updateGravityDB {
@@ -38,22 +38,22 @@ function updateGravityDB {
 	# Another conditional exit
 	if [[ ! -s "${file_gravity_tmp}" ]]; then
 		echo "[i] Unable to process ${file_gravity_tmp}"
-		exit 1
+		return 1
 	fi
 
 	# Truncate gravity table
 	output=$( { sudo sqlite3 ${db_gravity} "DELETE FROM ${table}"; } 2>&1 )
 	status="$?"
 
-	[[ "${status}" -ne  0 ]] && echo '[i] Failed to truncate gravity DB' && exit 1
+	[[ "${status}" -ne  0 ]] && echo '[i] Failed to truncate gravity DB' && return 1
 
 	# Upload optimised gravity
 	output=$( { printf ".mode csv\\n.import \"%s\" %s\\n" "${file_gravity_tmp}" "${table}" | sudo sqlite3 "${db_gravity}"; } 2>&1 )
 	status="$?"
 
-	[[ "${status}" -ne  0 ]] && echo '[i] Unable to load entries into gravity' && exit 1
+	[[ "${status}" -ne  0 ]] && echo '[i] Unable to load entries into gravity' && return 1
 
-	return
+	return 0
 }
 
 # Update gravity
