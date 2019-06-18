@@ -73,6 +73,9 @@ if [[ -n "${str_gravity}" ]]; then
 	file_gravity_tmp=$(mktemp --suffix=.gravity)
 	# Output current gravity domains to temp file
 	echo "${str_gravity}" > "${file_gravity_tmp}"
+	# Remove invalid characters from gravity
+	file_tmp_output=$(mktemp --suffix='.gravity')
+	iconv -f "$(file -b --mime-encoding "${file_gravity_tmp}")" -t UTF-8 -c "${file_gravity_tmp}" > "${file_tmp_output}" && mv "${file_tmp_output}" "${file_gravity_tmp}"
 else
 	echo '[i] No gravity domains were found'; exit 1;
 fi
