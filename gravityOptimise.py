@@ -6,52 +6,6 @@ import re
 import subprocess
 import ahocorasick
 
-
-def fetch_url(url):
-
-    if not url:
-        return
-
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0'}
-
-    print('[i] Fetching:', url)
-
-    try:
-        response = urlopen(Request(url, headers=headers))
-    except HTTPError as e:
-        print('[E] HTTP Error:', e.code, 'whilst fetching', url)
-        return
-    except URLError as e:
-        print('[E] URL Error:', e.reason, 'whilst fetching', url)
-        return
-
-    # Read and decode
-    response = response.read().decode('UTF-8').replace('\r\n', '\n')
-
-    # If there is data
-    if response:
-        # Strip leading and trailing whitespace
-        response = '\n'.join(x.strip() for x in response.splitlines())
-
-    # Return the hosts
-    return response
-
-
-def connectDB(db):
-
-    if not db:
-        return
-
-    conn = None
-
-    try:
-        conn = sqlite3.connect(db)
-    except sqlite3.Error as e:
-        print(e)
-
-    return conn
-
-
 path_pihole = r'/etc/pihole'
 path_dnsmasq = r'/etc/dnsmasq.d'
 path_legacy_regex = os.path.join(path_pihole, 'regex.list')
@@ -103,8 +57,14 @@ print('[i] Fetching domains')
 if db_exists:
     # Create a DB connection
     print(f'[i] Connecting to {path_pihole_db}')
+
     # Create a connection object
-    conn = connectDB(path_pihole_db)
+    try:
+        conn = sqlite3.connect(path_pihole_db)
+    except sqlite3.Error as e:
+        print(e)
+        exit(1)
+
     # Create a cursor object
     c = conn.cursor()
     # Run query to fetch domains
