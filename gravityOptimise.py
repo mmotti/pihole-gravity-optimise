@@ -217,7 +217,7 @@ if set_removal_domains:
 
         # Output gravity set to gravity.list
         with open(path_legacy_gravity, 'w') as fWrite:
-            for line in set_gravity_domains:
+            for line in sorted(set_gravity_domains):
                 fWrite.write(f'{line}\n')
 
         print(f'[i] --> {len(set_gravity_domains)} domains remain in gravity.list')
