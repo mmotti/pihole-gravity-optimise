@@ -67,11 +67,11 @@ set_regexp_domain_matches = set()
 set_removal_domains = set()
 
 db_exists = False
-c = False
-conn = False
+c = None
+conn = None
 
-count_conflicts_wildcards = False
-count_conflicts_regexps = False
+count_conflicts_wildcards = None
+count_conflicts_regexps = None
 
 # Exit if not running as root
 if not os.getuid() == 0:
