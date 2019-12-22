@@ -43,7 +43,7 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 #### Installations:
 Install the following packages:
 
-`sudo apt-get install python3 python3-pip`
+`sudo apt-get install python3 python3-pip setuptools`
 
 Install the following module:
 
