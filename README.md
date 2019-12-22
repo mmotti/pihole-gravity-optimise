@@ -43,15 +43,12 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 #### Installations:
 Install the following packages:
 
-`sudo apt-get install python3 python3-pip`
+`sudo apt-get install python3 python3-pip python3-dev build-essential`
 
 Install the following modules:
 
-`sudo pip3 install setuptools wheel pyahocorasick`
-
-Install the following only if you experience an error when trying to install pyahocorasick:
-
-`sudo apt-get install python3-dev`
+`sudo pip3 install setuptools wheel`
+`sudo pip3 install pyahocorasick`
 
 ### Run the optimisation
 
