@@ -47,7 +47,7 @@ Install the following packages:
 
 Install the following modules:
 
-`sudo pip3 install pyahocorasick setuptools wheel`
+`sudo pip3 install setuptools wheel pyahocorasick`
 
 Install the following only if you experience an error when trying to install pyahocorasick:
 
