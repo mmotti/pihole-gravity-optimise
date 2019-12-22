@@ -40,7 +40,7 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 2. You must also install the following module for Python: **pyahocorasick**
 3. The script must be run as root (sudo)
 
-#### Installations:
+### Installations:
 Make sure the following packages are installed:
 
 `sudo apt-get install python3 python3-pip python3-dev build-essential`
