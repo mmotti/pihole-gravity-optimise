@@ -41,13 +41,16 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 3. The script must be run as root (sudo)
 
 #### Installations:
-Install the following packages:
+Make sure the following packages are installed:
 
 `sudo apt-get install python3 python3-pip python3-dev build-essential`
 
-Install the following modules:
+Make sure the following Python modules are installed:
 
 `sudo pip3 install setuptools wheel`
+
+Install the pyahocorasick Python module:
+
 `sudo pip3 install pyahocorasick`
 
 ### Run the optimisation
