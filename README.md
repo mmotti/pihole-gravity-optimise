@@ -45,7 +45,7 @@ Install the following packages:
 
 `sudo apt-get install python3 python3-pip`
 
-Install the following module:
+Install the following modules:
 
 `sudo pip3 install pyahocorasick setuptools`
 
