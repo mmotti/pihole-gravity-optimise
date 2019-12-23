@@ -74,7 +74,8 @@ else:
     # If gravity.list exists and isn't 0 bytes
     if os.path.exists(path_legacy_gravity) and os.path.getsize(path_legacy_gravity) > 0:
         # Read to set
-        with open(path_legacy_gravity, 'r') as fOpen:
+        # Excluding non utf-8 characters that may have been introduced by list maintainers
+        with open(path_legacy_gravity, 'r', encoding='utf-8', errors='ignore') as fOpen:
             set_gravity_domains.update(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
 
 # If gravity domains were returned
