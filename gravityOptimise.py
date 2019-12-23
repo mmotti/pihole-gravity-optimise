@@ -164,7 +164,8 @@ if list_regexps:
     print('[i] Checking for gravity matches')
 
     # Split regexps into chunks
-    list_regex_chunks = [list_regexps[x:x + 10] for x in range(0, len(list_regexps), 10)]
+    chunk_size = 10
+    list_regex_chunks = [list_regexps[x:x + chunk_size] for x in range(0, len(list_regexps), chunk_size)]
     # Set conflict counter to 0
     count_conflicts_regexps = 0
 
