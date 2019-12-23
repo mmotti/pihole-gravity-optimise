@@ -41,7 +41,7 @@ if not os.path.exists(path_pihole):
 else:
     print('[i] Pi-hole path exists')
 
-print('[i] Updating gravity')
+print('[i] Updating gravity (this may take a little time)')
 subprocess.run(['pihole', '-g'], stdout=subprocess.DEVNULL)
 
 # Determine whether we are using DB or not
