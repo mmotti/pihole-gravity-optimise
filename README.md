@@ -42,6 +42,7 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 
 ### Installations:
 Update your list of available packages
+
 `sudo apt-get update`
 
 Make sure the following packages are installed:
