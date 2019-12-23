@@ -68,7 +68,7 @@ exit
 ```
 
 #### Manually running the gravityOptimise script
-Enter `python3 gravityOptimise.py` in Terminal
+Enter `sudo python3 /usr/local/bin/gravityOptimise.py` in Terminal
 
 
 #### Create a Cron file (running on a schedule)
