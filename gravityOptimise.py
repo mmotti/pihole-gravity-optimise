@@ -49,7 +49,7 @@ if os.path.isfile(path_pihole_db) and os.path.getsize(path_pihole_db) > 0:
     db_exists = True
     print('[i] DB detected')
 else:
-    print('[i] Legacy regex.list detected')
+    print('[i] Legacy lists detected')
 
 # Fetch gravity domains
 print('[i] Fetching domains')
