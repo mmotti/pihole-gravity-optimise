@@ -37,8 +37,7 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 
 ### Requirements
 1. This script requires **Python 3.6+** in order to run. It has been written and tested on Raspbian Buster / DietPi.
-2. You must also install the following module for Python: **pyahocorasick**
-3. The script must be run as root (sudo)
+2. The script must be run as root (sudo)
 
 ### Installations:
 Update your list of available packages
