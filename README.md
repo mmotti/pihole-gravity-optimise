@@ -36,7 +36,7 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 * Each time `pihole -g` is ran, either through updates, automatic cron or manually, any entries that were previously removed by this script will be re-added so you will need to run it regularly.
 
 ### Requirements
-1. This script requires **Python 3** in order to run. It has been written and tested on Raspbian Buster / DietPi.
+1. This script requires **Python 3.6+** in order to run. It has been written and tested on Raspbian Buster / DietPi.
 2. You must also install the following module for Python: **pyahocorasick**
 3. The script must be run as root (sudo)
 
@@ -47,15 +47,7 @@ Update your list of available packages
 
 Make sure the following packages are installed:
 
-`sudo apt-get install python3 python3-pip python3-dev build-essential`
-
-Make sure the following Python modules are installed:
-
-`sudo pip3 install setuptools wheel`
-
-Install the pyahocorasick Python module:
-
-`sudo pip3 install pyahocorasick`
+`sudo apt-get install python3`
 
 ### Run the optimisation
 
