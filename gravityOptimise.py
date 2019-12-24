@@ -4,7 +4,7 @@ import os
 import sqlite3
 import re
 import subprocess
-import ahocorasick
+import tempfile
 
 path_pihole = r'/etc/pihole'
 path_dnsmasq = r'/etc/dnsmasq.d'
@@ -14,8 +14,7 @@ path_pihole_db = os.path.join(path_pihole, 'gravity.db')
 
 set_gravity_domains = set()
 set_wildcard_domains = set()
-list_regexps = list()
-list_regex_chunks = list()
+set_regexps = set()
 list_removal_chunks = list()
 set_regexp_domain_matches = set()
 set_removal_domains = set()
@@ -42,7 +41,7 @@ else:
     print('[i] Pi-hole path exists')
 
 print('[i] Updating gravity (this may take a little time)')
-subprocess.run(['pihole', '-g'], stdout=subprocess.DEVNULL)
+subprocess.call(['pihole', '-g'], stdout=subprocess.DEVNULL)
 
 # Determine whether we are using DB or not
 if os.path.isfile(path_pihole_db) and os.path.getsize(path_pihole_db) > 0:
@@ -96,7 +95,7 @@ if os.path.isdir(path_dnsmasq):
         # If it's a conf file and not the pi-hole conf
         if file.endswith('.conf') and file != '01-pihole.conf':
             # Read contents to set
-            with open(os.path.join(path_dnsmasq, file), 'r') as fOpen:
+            with open(os.path.join(path_dnsmasq, file), 'r', encoding='utf-8', errors='ignore') as fOpen:
                 set_wildcard_domains.update(x.split('/')[1] for x in (line.strip() for line in fOpen)
                                             if x[:1] != '#' and re.match(regexp_wildcard, x))
 
@@ -110,39 +109,46 @@ if set_wildcard_domains:
     # Add exact wildcard matches to removal set
     set_removal_domains.update(set_wildcard_domains)
 
-    # Create a copy of sets with start / wildcard / end markers
-    set_marked_gravity_domains = {f'^{x}$' for x in set_gravity_domains}
-    set_marked_wildcard_domains = {f'.{x}$' for x in set_wildcard_domains}
+    # Initialise a temp file for marked gravity domains
+    with tempfile.NamedTemporaryFile('w+') as temp_marked_gravity:
+        # Initialise a temp file for marked wildcard domains
+        with tempfile.NamedTemporaryFile('w+') as temp_marked_wildcard:
+            # Write marked gravity domains
+            for line in (f'^{x}$' for x in set_gravity_domains):
+                temp_marked_gravity.write(f'{line}\n')
+            # Write marked wildcard domains
+            for line in (f'.{x}$' for x in set_wildcard_domains):
+                temp_marked_wildcard.write(f'{line}\n')
 
-    # Initialise finite-state machine of wildcards
-    automaton = ahocorasick.Automaton()
+            # Seek to start of files
+            temp_marked_gravity.seek(0)
+            temp_marked_wildcard.seek(0)
 
-    # Set conflict iterator
-    count_conflicts_wildcards = 0
+            # Create a subprocess command to run a fixed-string grep search
+            # for wildcards against the domains
+            cmd = subprocess.Popen(['grep', '-Ff', temp_marked_wildcard.name, temp_marked_gravity.name],
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
 
-    # Add wildcards to automaton
-    for idx, wildcard in enumerate(set_marked_wildcard_domains):
-        automaton.add_word(wildcard, (idx, wildcard))
+            # Run the command
+            grep_result = [x[1:-1] for x in cmd.communicate()[0].split('\n') if x]
+            # Fetch the return code
+            grep_return_code = cmd.returncode
 
-    # Convert to Aho-Corasick
-    automaton.make_automaton()
+            # If there were matches
+            if grep_return_code == 0:
+                # Add to removal domains
+                set_removal_domains.update(grep_result)
+                # Remove from gravity domains
+                set_gravity_domains.difference_update(grep_result)
+                # Status update
+                print(f'[i] --> {len(grep_result)} conflicts found')
 
-    # For each domain
-    for domain in set_marked_gravity_domains:
-        # If a wildcard matches the domain
-        if any(automaton.iter(domain)):
-            # Add domains to removal set
-            set_removal_domains.add(domain[1:-1])
-            # Increment conflict counter
-            count_conflicts_wildcards += 1
-
-    # If there were conflicts
-    if count_conflicts_wildcards > 0:
-        print(f'[i] --> {count_conflicts_wildcards} conflicts found')
-        # Remove domains from gravity set
-        set_gravity_domains.difference_update(set_removal_domains)
-    else:
-        print('[i] --> 0 conflicts found')
+            # If there were no matches
+            elif grep_return_code == 1:
+                print('[i] --> 0 conflicts found')
+            # If there was an error running grep
+            elif grep_return_code == 2:
+                print('[i] --> An error occurred when running grep command')
 else:
     print('[i] --> No wildcards found')
 
@@ -151,42 +157,58 @@ print('[i] Fetching regexps')
 
 if db_exists:
     c.execute('SELECT domain FROM domainlist WHERE TYPE = 3')
-    list_regexps.extend(x[0] for x in c.fetchall())
+    set_regexps.update(x[0] for x in c.fetchall())
 else:
     # If regex.list exists and isn't 0 bytes
     if os.path.exists(path_legacy_regex) and os.path.getsize(path_legacy_regex) > 0:
         # Read to set
-        with open(path_legacy_regex, 'r') as fOpen:
-            list_regexps.extend(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
+        with open(path_legacy_regex, 'r', encoding='utf-8', errors='ignore') as fOpen:
+            set_regexps.update(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
 
-if list_regexps:
-    print(f'[i] --> {len(list_regexps)} regexps found')
+if set_regexps:
+    print(f'[i] --> {len(set_regexps)} regexps found')
     print('[i] Checking for gravity matches')
 
-    # Split regexps into chunks
-    chunk_size = 10
-    list_regex_chunks = [list_regexps[x:x + chunk_size] for x in range(0, len(list_regexps), chunk_size)]
-    # Set conflict counter to 0
-    count_conflicts_regexps = 0
+    # Initialise temp file for regexps
+    with tempfile.NamedTemporaryFile('w+') as temp_regexps:
+        # Initialise temp file for gravity
+        with tempfile.NamedTemporaryFile('w+') as temp_gravity:
+            # Add regexps to temp file
+            for line in set_regexps:
+                temp_regexps.write(f'{line}\n')
+            # Add gravity domains to temp file
+            for line in set_gravity_domains:
+                temp_gravity.write(f'{line}\n')
 
-    # For each regex chunk
-    for chunk in list_regex_chunks:
-        # Convert to an OR statement
-        chunk = re.compile(fr'({"|".join(chunk)})')
-        # For each domain in gravity
-        for domain in set_gravity_domains:
-            # If it matches the regexp
-            if re.search(chunk, domain):
-                set_removal_domains.add(domain)
-                count_conflicts_regexps += 1
+            # Seek to start of files
+            temp_regexps.seek(0)
+            temp_gravity.seek(0)
 
-    # If there were matches
-    if count_conflicts_regexps > 0:
-        print(f'[i] --> {count_conflicts_regexps} matches found in gravity')
-        # Remove domains from gravity set
-        set_gravity_domains.difference_update(set_removal_domains)
-    else:
-        print('[i] --> 0 matches found')
+            # Create a subprocess command to run a fixed-string grep search
+            # for wildcards against the domains
+            cmd = subprocess.Popen(['grep', '-Ef', temp_regexps.name, temp_gravity.name],
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
+
+            # Run the command
+            grep_result = [x for x in cmd.communicate()[0].split('\n') if x]
+            # Fetch the return code
+            grep_return_code = cmd.returncode
+
+            # If there were matches
+            if grep_return_code == 0:
+                # Add to removal domains
+                set_removal_domains.update(grep_result)
+                # Remove from gravity domains
+                set_gravity_domains.difference_update(grep_result)
+                # Status update
+                print(f'[i] --> {len(grep_result)} matches found in gravity')
+
+            # If there were no matches
+            elif grep_return_code == 1:
+                print('[i] --> 0 matches found in gravity')
+            # If there was an error running grep
+            elif grep_return_code == 2:
+                print('[i] --> An error occurred when running grep command')
 else:
     print('[i] --> No regexps found')
 
@@ -198,7 +220,8 @@ if set_removal_domains:
 
         # Split domains into chunks
         chunk_size = 1000
-        list_removal_chunks = [list(set_removal_domains)[x:x + chunk_size] for x in range(0, len(set_removal_domains), chunk_size)]
+        list_removal_chunks = [list(set_removal_domains)[x:x + chunk_size]
+                               for x in range(0, len(set_removal_domains), chunk_size)]
 
         # For each chunk
         print('[i] Running deletions')
@@ -218,13 +241,13 @@ if set_removal_domains:
         print('[i] Outputting updated gravity.list')
 
         # Output gravity set to gravity.list
-        with open(path_legacy_gravity, 'w') as fWrite:
+        with open(path_legacy_gravity, 'w', encoding='utf-8') as fWrite:
             for line in sorted(set_gravity_domains):
                 fWrite.write(f'{line}\n')
 
         print(f'[i] --> {len(set_gravity_domains)} domains remain in gravity.list')
 
     print('[i] Restarting Pi-hole')
-    subprocess.run(['pihole', 'restartdns', 'reload'], stdout=subprocess.DEVNULL)
+    subprocess.call(['pihole', 'restartdns', 'reload'], stdout=subprocess.DEVNULL)
 else:
     print('[i] No optimisation required')
