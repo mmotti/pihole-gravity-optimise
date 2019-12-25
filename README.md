@@ -51,34 +51,3 @@ Make sure the following packages are installed:
 ### Run the optimisation
 
 `curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3`
-
-### Install and run optimisation locally
-
-Download the script, copy it to `/usr/local/bin/` and give it execution permissions:
-```
-sudo bash
-wget -qO /usr/local/bin/gravityOptimise.py https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py
-chmod +x /usr/local/bin/gravityOptimise.py
-exit
-```
-
-#### Manually running the gravityOptimise script
-Enter `sudo python3 /usr/local/bin/gravityOptimise.py` in Terminal
-
-
-#### Create a Cron file (running on a schedule)
-This example will run the script every morning at 03:45
-1. `sudo nano /etc/cron.d/gravityOptimise`
-2. Enter: `45 3 * * * root PATH="$PATH:/usr/local/bin/" /usr/bin/python3 /usr/local/bin/gravityOptimise.py`
-3. Press `CTRL` + `X`
-4. Press `Y`
-5. Press `Enter`
-
-#### Add entries back to gravity table
-`pihole -g`
-
-#### Removing the script
-```
-sudo rm -f /usr/local/bin/gravityOptimise.py
-sudo rm -f /etc/cron.d/gravityOptimise
-pihole -g
