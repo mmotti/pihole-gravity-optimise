@@ -5,6 +5,23 @@ import sqlite3
 import re
 import subprocess
 import tempfile
+import locale
+
+
+def split_list(in_list, size):
+    # Set action on parameters missing
+    if not in_list:
+        return
+    if not size:
+        size = 1000
+
+    # Yield each sub-list
+    for i in range(0, len(in_list), size):
+        yield in_list[i:i + size]
+
+
+# Set locale automatically
+locale.setlocale(locale.LC_ALL, '')
 
 path_pihole = r'/etc/pihole'
 path_dnsmasq = r'/etc/dnsmasq.d'
@@ -64,9 +81,14 @@ if db_exists:
         print(e)
         exit(1)
 
+    # Tell the text factory to ignore UTF-8 errors as
+    # gravity doesn't yet accommodate for these pesky domains
+    conn.text_factory = lambda b: b.decode(errors='ignore')
     # Create a cursor object
     c = conn.cursor()
+
     # Run query to fetch domains
+    print('[i] Querying DB for gravity domains')
     c.execute('SELECT domain FROM gravity')
     set_gravity_domains.update(x[0] for x in c.fetchall())
 else:
@@ -79,7 +101,7 @@ else:
 
 # If gravity domains were returned
 if set_gravity_domains:
-    print(f'[i] --> {len(set_gravity_domains)} domains found')
+    print(f'[i] --> {len(set_gravity_domains):n} domains found')
 else:
     print('[i] No domains were found')
     exit(1)
@@ -101,7 +123,7 @@ if os.path.isdir(path_dnsmasq):
 
 # If wildcards are found
 if set_wildcard_domains:
-    print(f'[i] --> {len(set_wildcard_domains)} wildcards found')
+    print(f'[i] --> {len(set_wildcard_domains):n} wildcards found')
     print(f'[i] Identifying wildcard conflicts with gravity')
 
     # Remove exact wildcard matches from gravity domains
@@ -141,7 +163,7 @@ if set_wildcard_domains:
                 # Remove from gravity domains
                 set_gravity_domains.difference_update(grep_result)
                 # Status update
-                print(f'[i] --> {len(grep_result)} conflicts found')
+                print(f'[i] --> {len(grep_result):n} conflicts found')
 
             # If there were no matches
             elif grep_return_code == 1:
@@ -166,7 +188,7 @@ else:
             set_regexps.update(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
 
 if set_regexps:
-    print(f'[i] --> {len(set_regexps)} regexps found')
+    print(f'[i] --> {len(set_regexps):n} regexps found')
     print('[i] Checking for gravity matches')
 
     # Initialise temp file for regexps
@@ -201,7 +223,7 @@ if set_regexps:
                 # Remove from gravity domains
                 set_gravity_domains.difference_update(grep_result)
                 # Status update
-                print(f'[i] --> {len(grep_result)} matches found in gravity')
+                print(f'[i] --> {len(grep_result):n} matches found in gravity')
 
             # If there were no matches
             elif grep_return_code == 1:
@@ -216,16 +238,14 @@ else:
 if set_removal_domains:
 
     if db_exists:
-        print('[i] Prepping for DB update')
-
-        # Split domains into chunks
-        chunk_size = 1000
-        list_removal_chunks = [list(set_removal_domains)[x:x + chunk_size]
-                               for x in range(0, len(set_removal_domains), chunk_size)]
-
-        # For each chunk
         print('[i] Running deletions')
-        for chunk in list_removal_chunks:
+
+        # Define list chunk size
+        chunk_size = 1000
+
+        # For each list chunk
+        for chunk in split_list(list(set_removal_domains), chunk_size):
+            # Run the deletions
             c.executemany('DELETE FROM gravity '
                           'WHERE domain IN (?)', [(x,) for x in chunk])
 
@@ -234,7 +254,7 @@ if set_removal_domains:
 
         # Query actual DB count
         c.execute('SELECT COUNT(DISTINCT domain) FROM gravity')
-        print(f'[i] --> {c.fetchall()[0][0]} domains remain in the gravity database')
+        print(f'[i] --> {c.fetchall()[0][0]:n} domains remain in the gravity database')
 
         conn.close()
     else:
@@ -245,7 +265,7 @@ if set_removal_domains:
             for line in sorted(set_gravity_domains):
                 fWrite.write(f'{line}\n')
 
-        print(f'[i] --> {len(set_gravity_domains)} domains remain in gravity.list')
+        print(f'[i] --> {len(set_gravity_domains):n} domains remain in gravity.list')
 
     print('[i] Restarting Pi-hole')
     subprocess.call(['pihole', 'restartdns', 'reload'], stdout=subprocess.DEVNULL)
