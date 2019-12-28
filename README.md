@@ -14,25 +14,25 @@ If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex
 
 ### Example Output ###
 ```
-dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
+mmotti@ubuntu-server:/usr/local/bin$ curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3
 [i] Root user detected
 [i] Pi-hole path exists
-[i] Updating gravity
+[i] Updating gravity (this may take a little time)
 [i] DB detected
 [i] Fetching domains
 [i] Connecting to /etc/pihole/gravity.db
-[i] --> 113497 domains found
+[i] Querying DB for gravity domains
+[i] --> 113,492 domains found
 [i] Scanning /etc/dnsmasq.d for wildcards
-[i] --> 37570 wildcards found
+[i] --> 35,877 wildcards found
 [i] Identifying wildcard conflicts with gravity
-[i] --> 20275 conflicts found
+[i] --> 41,467 conflicts found
 [i] Fetching regexps
 [i] --> 16 regexps found
 [i] Checking for gravity matches
-[i] --> 20553 matches found in gravity
-[i] Prepping for DB update
+[i] --> 8,100 matches found in gravity
 [i] Running deletions
-[i] --> 67389 domains remain in the gravity database
+[i] --> 59,438 domains remain in the gravity database
 [i] Restarting Pi-hole
 ```
 
