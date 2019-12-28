@@ -7,6 +7,11 @@ If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex
 1. Identifies gravity table entries that do not match items in any DNSMASQ conf files.
 1. Creates a new, optimised gravity table
 
+### Requirements
+1. This script requires **Python 3.6+** in order to run. It has been written and tested on Raspbian Buster / DietPi.
+2. The script must be run as root (sudo)
+
+
 ### Example Output ###
 ```
 dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
@@ -35,11 +40,8 @@ dietpi@DietPi:/mnt/dietpi_userdata$ sudo python3 test.py
 * All commands will need to be entered via Terminal (PuTTY or your SSH client of choice) after logging in.
 * Each time `pihole -g` is ran, either through updates, automatic cron or manually, any entries that were previously removed by this script will be re-added so you will need to run it regularly.
 
-### Requirements
-1. This script requires **Python 3.6+** in order to run. It has been written and tested on Raspbian Buster / DietPi.
-2. The script must be run as root (sudo)
 
-### Installations:
+#### Installations:
 Update your list of available packages
 
 `sudo apt-get update`
@@ -48,11 +50,11 @@ Make sure the following packages are installed:
 
 `sudo apt-get install python3`
 
-### Run the optimisation
+#### Running the optimisation
 
 `curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3`
 
-### Running on a schedule
+#### Running on a schedule
 Example cron job that runs each night at 02:45:
 
 1. Edit the root user's crontab (`sudo crontab -u root -e`)
