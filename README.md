@@ -51,3 +51,16 @@ Make sure the following packages are installed:
 ### Run the optimisation
 
 `curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3`
+
+### Running on a schedule
+Example cron job that runs each night at 02:45:
+
+1. Edit the root user's crontab (`sudo crontab -u root -e`)
+
+2. Enter the following:
+```
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+45 2 * * * /usr/bin/curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | /usr/bin/python3
+```
+3. Save changes
