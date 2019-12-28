@@ -1,5 +1,5 @@
-from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
+#!/usr/bin/env python
+
 import os
 import sqlite3
 import re
