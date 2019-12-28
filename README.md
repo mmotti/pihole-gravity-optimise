@@ -14,7 +14,7 @@ If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex
 
 ### Example Output ###
 ```
-mmotti@ubuntu-server:/usr/local/bin$ curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3
+mmotti@ubuntu-server:~$ curl -sSl https://raw.githubusercontent.com/mmotti/pihole-gravity-optimise/master/gravityOptimise.py | sudo python3
 [i] Root user detected
 [i] Pi-hole path exists
 [i] Updating gravity (this may take a little time)
