@@ -40,9 +40,6 @@ db_exists = False
 c = None
 conn = None
 
-count_conflicts_wildcards = None
-count_conflicts_regexps = None
-
 # Exit if not running as root
 if not os.getuid() == 0:
     print('Please run this script as root')
@@ -106,73 +103,80 @@ else:
     print('[i] No domains were found')
     exit(1)
 
-# Identify wildcard domains
-print(f'[i] Scanning {path_dnsmasq} for wildcards')
-regexp_wildcard = re.compile(r'^address=\/.+\/(([0-9]{1,3}\.){3}[0-9]{1,3}|::|#)?$')
-
 # If dnsmasq dir exists, extract wildcards
 if os.path.isdir(path_dnsmasq):
+    print(f'[i] Scanning {path_dnsmasq} for wildcards')
+    # Set the wildcard regexp
+    regexp_wildcard = r'^address=\/.+\/(([0-9]{1,3}\.){3}[0-9]{1,3}|::|#)?$'
     # For each file in dnsmasq dir
     for file in os.listdir(path_dnsmasq):
         # If it's a conf file and not the pi-hole conf
         if file.endswith('.conf') and file != '01-pihole.conf':
-            # Read contents to set
-            with open(os.path.join(path_dnsmasq, file), 'r', encoding='utf-8', errors='ignore') as fOpen:
-                set_wildcard_domains.update(x.split('/')[1] for x in (line.strip() for line in fOpen)
-                                            if x[:1] != '#' and re.match(regexp_wildcard, x))
-
-# If wildcards are found
-if set_wildcard_domains:
-    print(f'[i] --> {len(set_wildcard_domains):n} wildcards found')
-    print(f'[i] Identifying wildcard conflicts with gravity')
-
-    # Remove exact wildcard matches from gravity domains
-    set_gravity_domains.difference_update(set_wildcard_domains)
-    # Add exact wildcard matches to removal set
-    set_removal_domains.update(set_wildcard_domains)
-
-    # Initialise a temp file for marked gravity domains
-    with tempfile.NamedTemporaryFile('w+') as temp_marked_gravity:
-        # Initialise a temp file for marked wildcard domains
-        with tempfile.NamedTemporaryFile('w+') as temp_marked_wildcard:
-            # Write marked gravity domains
-            for line in (f'^{x}$' for x in set_gravity_domains):
-                temp_marked_gravity.write(f'{line}\n')
-            # Write marked wildcard domains
-            for line in (f'.{x}$' for x in set_wildcard_domains):
-                temp_marked_wildcard.write(f'{line}\n')
-
-            # Seek to start of files
-            temp_marked_gravity.seek(0)
-            temp_marked_wildcard.seek(0)
-
-            # Create a subprocess command to run a fixed-string grep search
-            # for wildcards against the domains
-            cmd = subprocess.Popen(['grep', '-Ff', temp_marked_wildcard.name, temp_marked_gravity.name],
+            # Create a subprocess command to run grep on the current file
+            cmd = subprocess.Popen(['grep', '-E', regexp_wildcard, os.path.join(path_dnsmasq, file)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
-
             # Run the command
-            grep_result = [x[1:-1] for x in cmd.communicate()[0].split('\n') if x]
+            grep_result = [x.split('/')[1] for x in cmd.communicate()[0].split('\n') if x]
             # Fetch the return code
             grep_return_code = cmd.returncode
 
             # If there were matches
             if grep_return_code == 0:
-                # Add to removal domains
-                set_removal_domains.update(grep_result)
-                # Remove from gravity domains
-                set_gravity_domains.difference_update(grep_result)
-                # Status update
-                print(f'[i] --> {len(grep_result):n} conflicts found')
+                # Add the wildcard domain to the wildcards set
+                set_wildcard_domains.update(grep_result)
 
-            # If there were no matches
-            elif grep_return_code == 1:
-                print('[i] --> 0 conflicts found')
-            # If there was an error running grep
-            elif grep_return_code == 2:
-                print('[i] --> An error occurred when running grep command')
-else:
-    print('[i] --> No wildcards found')
+    # If wildcards are found
+    if set_wildcard_domains:
+        print(f'[i] --> {len(set_wildcard_domains):n} wildcards found')
+        print(f'[i] Identifying wildcard conflicts with gravity')
+
+        # Remove exact wildcard matches from gravity domains
+        set_gravity_domains.difference_update(set_wildcard_domains)
+        # Add exact wildcard matches to removal set
+        set_removal_domains.update(set_wildcard_domains)
+
+        # Initialise a temp file for marked gravity domains
+        with tempfile.NamedTemporaryFile('w+') as temp_marked_gravity:
+            # Initialise a temp file for marked wildcard domains
+            with tempfile.NamedTemporaryFile('w+') as temp_marked_wildcard:
+                # Write marked gravity domains
+                for line in (f'^{x}$' for x in set_gravity_domains):
+                    temp_marked_gravity.write(f'{line}\n')
+                # Write marked wildcard domains
+                for line in (f'.{x}$' for x in set_wildcard_domains):
+                    temp_marked_wildcard.write(f'{line}\n')
+
+                # Seek to start of files
+                temp_marked_gravity.seek(0)
+                temp_marked_wildcard.seek(0)
+
+                # Create a subprocess command to run a fixed-string grep search
+                # for wildcards against the domains
+                cmd = subprocess.Popen(['grep', '-Ff', temp_marked_wildcard.name, temp_marked_gravity.name],
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
+
+                # Run the command
+                grep_result = [x[1:-1] for x in cmd.communicate()[0].split('\n') if x]
+                # Fetch the return code
+                grep_return_code = cmd.returncode
+
+                # If there were matches
+                if grep_return_code == 0:
+                    # Add to removal domains
+                    set_removal_domains.update(grep_result)
+                    # Remove from gravity domains
+                    set_gravity_domains.difference_update(grep_result)
+                    # Status update
+                    print(f'[i] --> {len(grep_result):n} conflicts found')
+
+                # If there were no matches
+                elif grep_return_code == 1:
+                    print('[i] --> 0 conflicts found')
+                # If there was an error running grep
+                elif grep_return_code == 2:
+                    print('[i] --> An error occurred when running grep command')
+    else:
+        print('[i] --> No wildcards found')
 
 # Fetch regexps
 print('[i] Fetching regexps')
