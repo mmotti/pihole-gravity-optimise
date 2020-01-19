@@ -94,7 +94,7 @@ else:
         # Read to set
         # Excluding non utf-8 characters that may have been introduced by list maintainers
         with open(path_legacy_gravity, 'r', encoding='utf-8', errors='ignore') as fOpen:
-            set_gravity_domains.update(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
+            set_gravity_domains.update(map(lambda x : x if (x and x[:1] != '#') else None, map(str.strip, fOpen)))
 
 # If gravity domains were returned
 if set_gravity_domains:
@@ -189,7 +189,7 @@ else:
     if os.path.exists(path_legacy_regex) and os.path.getsize(path_legacy_regex) > 0:
         # Read to set
         with open(path_legacy_regex, 'r', encoding='utf-8', errors='ignore') as fOpen:
-            set_regexps.update(x for x in (line.strip() for line in fOpen) if x and x[:1] != '#')
+            set_regexps.update(map(lambda x : x if (x and x[:1] != '#') else None, map(str.strip, fOpen)))
 
 if set_regexps:
     print(f'[i] --> {len(set_regexps):n} regexps found')
@@ -266,8 +266,7 @@ if set_removal_domains:
 
         # Output gravity set to gravity.list
         with open(path_legacy_gravity, 'w', encoding='utf-8') as fWrite:
-            for line in sorted(set_gravity_domains):
-                fWrite.write(f'{line}\n')
+            fWrite.write('\n'.join(sorted(set_gravity_domains)))
 
         print(f'[i] --> {len(set_gravity_domains):n} domains remain in gravity.list')
 
