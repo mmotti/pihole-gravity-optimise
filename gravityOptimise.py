@@ -35,6 +35,7 @@ set_regexps = set()
 list_removal_chunks = list()
 set_regexp_domain_matches = set()
 set_removal_domains = set()
+count_db_gravity = None
 
 db_exists = False
 c = None
@@ -258,7 +259,15 @@ if set_removal_domains:
 
         # Query actual DB count
         c.execute('SELECT COUNT(DISTINCT domain) FROM gravity')
-        print(f'[i] --> {c.fetchall()[0][0]:n} domains remain in the gravity database')
+        count_db_gravity = c.fetchall()[0][0]
+        print(f'[i] --> {count_db_gravity:n} domains remain in the gravity database')
+
+        # Update gravity_count in info table
+        print('[i] Updating the gravity count in the info table')
+        c.execute('INSERT OR REPLACE INTO info (property, value) VALUES (?, ?)', ('gravity_count', count_db_gravity))
+
+        # Commit Changes
+        conn.commit()
 
         conn.close()
     else:
