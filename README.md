@@ -1,5 +1,11 @@
 # Optimise Pihole's gravity database
 
+**11/05/2020 Update**
+
+As of yesterday, Pi-hole V5 was released and with that came the move to a database. Due to the way that the domains are now stored (including duplicates if in multiple adlists), the database size not decreasing unless a VACUUM (db rebuild) is run after each optimisation (not efficient) and the fact that a gravity update undoes all of the changes by this script, it is no longer efficient to run. I will perhaps look to tackle this from a different angle in future, but, for now, this repo will be archived.
+
+---
+
 If you are making use of Pihole's [regex](https://github.com/mmotti/pihole-regex) filtering and/or DNSMASQ wildcards, then it's likely that your gravity domain table contains far more domains than necessary.
 
 ### What does the script do?
